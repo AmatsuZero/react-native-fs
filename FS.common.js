@@ -278,6 +278,13 @@ var RNFS = {
     return RNFSManager.copyFileAssets(normalizeFilePath(filepath), normalizeFilePath(destPath)).then(() => void 0);
   },
 
+  copyFolderAssets(filepath: string, destPath:string) {
+      if (!RNFSManager.copyFolderAssets) {
+          throw new Error('copyFolderAssets is not available on this platform');
+      }
+      return RNFSManager.copyFolderAssets(normalizeFilePath(filepath), normalizeFilePath(destPath)).then(() => void 0);
+  },
+
   // iOS only
   // Copies fotos from asset-library (camera-roll) to a specific location
   // with a given width or height
