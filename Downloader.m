@@ -23,37 +23,46 @@
 
 - (void)downloadFile:(RNFSDownloadParams*)params
 {
-  _params = params;
-
-  _bytesWritten = 0;
-
-  NSURL* url = [NSURL URLWithString:_params.fromUrl];
-
-  [[NSFileManager defaultManager] createFileAtPath:_params.toFile contents:nil attributes:nil];
-  _fileHandle = [NSFileHandle fileHandleForWritingAtPath:_params.toFile];
-
-  if (!_fileHandle) {
-    NSError* error = [NSError errorWithDomain:@"Downloader" code:NSURLErrorFileDoesNotExist
-                              userInfo:@{NSLocalizedDescriptionKey: [NSString stringWithFormat: @"Failed to create target file at path: %@", _params.toFile]}];
-
-    return _params.errorCallback(error);
-  } else {
-    [_fileHandle closeFile];
-  }
-
-  NSURLSessionConfiguration *config;
-  if (_params.background) {
-    NSString *uuid = [[NSUUID UUID] UUIDString];
-    config = [NSURLSessionConfiguration backgroundSessionConfigurationWithIdentifier:uuid];
-  } else {
-    config = [NSURLSessionConfiguration defaultSessionConfiguration];
-  }
-
-  config.HTTPAdditionalHeaders = _params.headers;
-
-  _session = [NSURLSession sessionWithConfiguration:config delegate:self delegateQueue:nil];
-  _task = [_session downloadTaskWithURL:url];
-  [_task resume];
+    _params = params;
+    
+    _bytesWritten = 0;
+    
+    NSURL* url = [NSURL URLWithString:_params.fromUrl];
+    NSError* error = nil;
+    NSFileManager* manager = [NSFileManager defaultManager];
+    //check if the directory existed before the download task. If not, just create one
+    NSURL* targetURL = [NSURL fileURLWithPath:_params.toFile];
+    NSString* filepath = [targetURL.URLByDeletingLastPathComponent.absoluteString substringFromIndex:@"file:///".length - 1];
+    if (![manager fileExistsAtPath: filepath]) {
+        [manager createDirectoryAtPath:targetURL.absoluteString withIntermediateDirectories:true attributes: nil error: &error];
+        if (error) {
+            return _params.errorCallback(error);
+        }
+    }
+    [manager createFileAtPath:_params.toFile contents:nil attributes:nil];
+    _fileHandle = [NSFileHandle fileHandleForWritingAtPath:_params.toFile];
+    if (!_fileHandle) {
+        NSError* error = [NSError errorWithDomain:@"Downloader" code:NSURLErrorFileDoesNotExist
+                                         userInfo:@{NSLocalizedDescriptionKey: [NSString stringWithFormat: @"Failed to create target file at path: %@", _params.toFile]}];
+        
+        return _params.errorCallback(error);
+    } else {
+        [_fileHandle closeFile];
+    }
+    
+    NSURLSessionConfiguration *config;
+    if (_params.background) {
+        NSString *uuid = [[NSUUID UUID] UUIDString];
+        config = [NSURLSessionConfiguration backgroundSessionConfigurationWithIdentifier:uuid];
+    } else {
+        config = [NSURLSessionConfiguration defaultSessionConfiguration];
+    }
+    
+    config.HTTPAdditionalHeaders = _params.headers;
+    
+    _session = [NSURLSession sessionWithConfiguration:config delegate:self delegateQueue:nil];
+    _task = [_session downloadTaskWithURL:url];
+    [_task resume];
 }
 
 - (void)URLSession:(NSURLSession *)session downloadTask:(NSURLSessionDownloadTask *)downloadTask didWriteData:(int64_t)bytesWritten totalBytesWritten:(int64_t)totalBytesWritten totalBytesExpectedToWrite:(int64_t)totalBytesExpectedToWrite
