@@ -590,7 +590,18 @@ public class RNFSManager extends ReactContextBaseJavaModule {
     @ReactMethod
     public void downloadFile(final ReadableMap options, final Promise promise) {
         try {
-            File file = new File(options.getString("toFile"));
+            String releaseDir = options.getString("toFile");
+            //下载前，先检查一遍文件夹是否已经创建，如果没有，需要先创建
+            String[] temp = releaseDir.split("/");
+            String dir = "";
+            for (int index = 0; index < temp.length-1; index++) {
+                dir += temp[index];
+                if (index < temp.length-2) {
+                    dir += "/";
+                }
+            }
+            checkFolderExists(dir);
+            File file = new File(releaseDir);
             URL url = new URL(options.getString("fromUrl"));
             final int jobId = options.getInt("jobId");
             ReadableMap headers = options.getMap("headers");
